@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo - 待办事项</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <!-- ==================== 认证区域 ==================== -->
+    <div id="auth-section" class="container">
+        <div class="card auth-card">
+            <div class="card-header">
+                <h1 class="app-title">📝 Todo 待办事项</h1>
+                <p class="app-subtitle">管理你的每一天</p>
+            </div>
+
+            <!-- 标签切换 -->
+            <div class="tab-switch">
+                <button id="tab-login" class="tab-btn active">登录</button>
+                <button id="tab-register" class="tab-btn">注册</button>
+            </div>
+
+            <!-- 登录表单 -->
+            <form id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="login-username">用户名</label>
+                    <input type="text" id="login-username" placeholder="请输入用户名" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">密码</label>
+                    <input type="password" id="login-password" placeholder="请输入密码" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">登 录</button>
+                <p id="login-error" class="error-msg"></p>
+            </form>
+
+            <!-- 注册表单 -->
+            <form id="register-form" class="auth-form hidden">
+                <div class="form-group">
+                    <label for="reg-username">用户名</label>
+                    <input type="text" id="reg-username" placeholder="请设置用户名" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="reg-password">密码</label>
+                    <input type="password" id="reg-password" placeholder="请设置密码" required autocomplete="new-password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">注 册</button>
+                <p id="register-error" class="error-msg"></p>
+                <p id="register-success" class="success-msg"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== Todo 主区域 ==================== -->
+    <div id="todo-section" class="container hidden">
+        <div class="card todo-card">
+            <!-- 顶部栏 -->
+            <div class="todo-header">
+                <div>
+                    <h1 class="app-title">📝 我的待办</h1>
+                    <p class="user-greeting">欢迎，<span id="current-username"></span></p>
+                </div>
+                <button id="btn-logout" class="btn btn-outline">退出登录</button>
+            </div>
+
+            <!-- 添加待办 -->
+            <form id="todo-form" class="todo-add-form">
+                <input type="text" id="todo-input" placeholder="添加新的待办事项..." required autocomplete="off">
+                <button type="submit" class="btn btn-primary">添加</button>
+            </form>
+
+            <!-- 统计信息 -->
+            <div class="todo-stats">
+                <span>共 <strong id="stat-total">0</strong> 项</span>
+                <span>已完成 <strong id="stat-done">0</strong> 项</span>
+            </div>
+
+            <!-- 待办列表 -->
+            <ul id="todo-list" class="todo-list">
+                <!-- 动态渲染 -->
+            </ul>
+
+            <!-- 空状态 -->
+            <div id="empty-state" class="empty-state hidden">
+                <div class="empty-icon">🎉</div>
+                <p>暂无待办事项</p>
+                <p class="empty-hint">添加你的第一个待办吧！</p>
+            </div>
+
+            <!-- 加载状态 -->
+            <div id="loading-state" class="loading-state">
+                <div class="spinner"></div>
+                <p>加载中...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
