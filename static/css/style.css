@@ -488,6 +488,23 @@ body {
     }
 }
 
+/* ==================== 实时时钟 ==================== */
+.clock {
+    position: fixed;
+    top: 20px;
+    right: 24px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-family: "SF Mono", "Fira Code", "Courier New", monospace;
+    letter-spacing: 2px;
+    z-index: 100;
+    pointer-events: none;
+}
+
 /* ==================== 响应式 ==================== */
 @media (max-width: 640px) {
     .auth-card {
