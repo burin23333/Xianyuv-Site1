@@ -70,6 +70,13 @@
                 </div>
             </div>
 
+            <!-- 搜索 -->
+            <div class="todo-search">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-input" placeholder="搜索待办事项..." autocomplete="off">
+                <button id="btn-clear-search" class="btn-icon search-clear hidden" title="清除搜索">✕</button>
+            </div>
+
             <!-- 添加待办 -->
             <form id="todo-form" class="todo-add-form">
                 <input type="text" id="todo-input" placeholder="添加新的待办事项..." required autocomplete="off">
@@ -86,6 +93,13 @@
             <ul id="todo-list" class="todo-list">
                 <!-- 动态渲染 -->
             </ul>
+
+            <!-- 分页 -->
+            <div id="pagination" class="pagination hidden">
+                <button id="btn-prev" class="btn btn-page" disabled>← 上一页</button>
+                <span id="page-info" class="page-info"></span>
+                <button id="btn-next" class="btn btn-page">下一页 →</button>
+            </div>
 
             <!-- 空状态 -->
             <div id="empty-state" class="empty-state hidden">

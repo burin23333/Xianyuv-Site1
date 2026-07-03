@@ -3,6 +3,11 @@
  */
 const TodoApp = {
     todos: [],
+    total: 0,
+    page: 1,
+    pageSize: 10,
+    keyword: "",
+    _searchTimer: null,
     _eventsBound: false,
 
     /**
@@ -27,6 +32,34 @@ const TodoApp = {
             this.addTodo();
         });
 
+        // 搜索（防抖 300ms）
+        document.getElementById("search-input").addEventListener("input", (e) => {
+            clearTimeout(this._searchTimer);
+            const val = e.target.value.trim();
+            this._searchTimer = setTimeout(() => {
+                if (this.keyword !== val) {
+                    this.keyword = val;
+                    this.page = 1;
+                    this.loadTodos();
+                }
+                // 显示/隐藏清除按钮
+                document.getElementById("btn-clear-search").classList.toggle("hidden", !val);
+            }, 300);
+        });
+
+        // 清除搜索
+        document.getElementById("btn-clear-search").addEventListener("click", () => {
+            document.getElementById("search-input").value = "";
+            document.getElementById("btn-clear-search").classList.add("hidden");
+            this.keyword = "";
+            this.page = 1;
+            this.loadTodos();
+        });
+
+        // 分页按钮
+        document.getElementById("btn-prev").addEventListener("click", () => this.goToPage(this.page - 1));
+        document.getElementById("btn-next").addEventListener("click", () => this.goToPage(this.page + 1));
+
         // 监听全局退出登录（token 过期）
         window.addEventListener("auth:logout", () => {
             Auth.showAuthSection();
@@ -42,18 +75,53 @@ const TodoApp = {
     async loadTodos() {
         this.showLoading(true);
         try {
-            const data = await api.getTodos();
-            if (Array.isArray(data)) {
-                this.todos = data;
+            const skip = (this.page - 1) * this.pageSize;
+            const data = await api.getTodos({
+                keyword: this.keyword,
+                skip,
+                limit: this.pageSize,
+            });
+            console.log("loadTodos 响应:", data);
+
+            // 格式1：后端做了分页 → {todos:[], total:N}
+            if (data && !Array.isArray(data) && data.todos) {
+                this.todos = data.todos;
+                this.total = data.total || 0;
+                this.render();
+            }
+            // 格式2：后端返回全量数据（裸数组）→ 前端自己做搜索+分页
+            else if (data && Array.isArray(data)) {
+                let filtered = data;
+                if (this.keyword) {
+                    const kw = this.keyword.toLowerCase();
+                    filtered = data.filter((t) => t.title.toLowerCase().includes(kw));
+                }
+                this.total = filtered.length;
+                this.todos = filtered.slice(skip, skip + this.pageSize);
                 this.render();
             } else if (data.message) {
                 this.showToast(data.message, "error");
+            } else {
+                console.warn("loadTodos 未识别响应结构:", data);
             }
         } catch (err) {
+            console.error("loadTodos 异常:", err);
             this.showToast("加载失败，请检查网络", "error");
         } finally {
             this.showLoading(false);
         }
+    },
+
+    /**
+     * 跳转到指定页
+     */
+    goToPage(page) {
+        const maxPage = Math.max(1, Math.ceil(this.total / this.pageSize));
+        if (page < 1 || page > maxPage) return;
+        this.page = page;
+        this.loadTodos();
+        // 滚动到顶部
+        document.querySelector(".todo-list").scrollTop = 0;
     },
 
     /**
@@ -66,15 +134,19 @@ const TodoApp = {
 
         try {
             const result = await api.createTodo(title);
+            console.log("addTodo 响应:", result);
             if (result.id) {
-                this.todos.unshift(result);
                 input.value = "";
-                this.render();
+                // 回到第一页显示新添加的项
+                this.page = 1;
+                console.log("重新加载列表, page=1, keyword=", this.keyword);
+                await this.loadTodos();
                 this.showToast("添加成功", "success");
             } else {
                 this.showToast(result.message || "添加失败", "error");
             }
         } catch (err) {
+            console.error("addTodo 异常:", err);
             this.showToast("添加失败", "error");
         }
     },
@@ -107,73 +179,65 @@ const TodoApp = {
     },
 
     /**
-     * 删除待办（乐观删除 + 3 秒撤销）
+     * 删除待办（确认后删除）
      */
     async deleteTodo(id) {
         const todo = this.todos.find((t) => t.id === id);
         if (!todo) return;
 
-        // 乐观删除：先从 UI 移除
-        this.todos = this.todos.filter((t) => t.id !== id);
-        this.render();
-
-        const title = todo.title;
-        let undone = false;
-        let toastEl = null;
-
-        // 撤销回调
-        const onUndo = () => {
-            undone = true;
-            this.todos.unshift(todo);
-            this.render();
-            this.showToast("已恢复", "success");
-        };
-
-        // 显示撤销 Toast
-        toastEl = this._buildUndoToast(title, onUndo);
-        document.body.appendChild(toastEl);
-
-        // 3 秒后真正删除
-        setTimeout(async () => {
-            if (undone) {
-                if (toastEl) toastEl.remove();
-                return;
-            }
-            try {
-                await api.deleteTodo(id);
-                if (toastEl) toastEl.remove();
-            } catch (err) {
-                // 删除失败，恢复数据
-                this.todos.unshift(todo);
-                this.render();
-                if (toastEl) toastEl.remove();
-                this.showToast("删除失败，已恢复", "error");
-            }
-        }, 3000);
+        // 显示确认弹窗
+        this._confirmDelete(todo, () => this._doDelete(id));
     },
 
     /**
-     * 构建带撤销按钮的 Toast
+     * 确认删除弹窗
      */
-    _buildUndoToast(title, onUndo) {
+    _confirmDelete(todo, onConfirm) {
         // 移除旧 toast
         const old = document.querySelector(".toast");
         if (old) old.remove();
 
         const toast = document.createElement("div");
-        toast.className = "toast undo-toast";
+        toast.className = "toast confirm-toast";
 
         const span = document.createElement("span");
-        span.textContent = `已删除「${title}」`;
+        span.textContent = `确定删除「${todo.title}」？`;
 
-        const btn = document.createElement("button");
-        btn.className = "toast-undo-btn";
-        btn.textContent = "撤销";
-        btn.addEventListener("click", onUndo);
+        const btnCancel = document.createElement("button");
+        btnCancel.className = "toast-cancel-btn";
+        btnCancel.textContent = "取消";
+        btnCancel.addEventListener("click", () => toast.remove());
+
+        const btnOk = document.createElement("button");
+        btnOk.className = "toast-ok-btn";
+        btnOk.textContent = "确认";
+        btnOk.addEventListener("click", () => {
+            toast.remove();
+            onConfirm();
+        });
 
         toast.appendChild(span);
-        toast.appendChild(btn);
-        return toast;
+        toast.appendChild(btnCancel);
+        toast.appendChild(btnOk);
+        document.body.appendChild(toast);
+    },
+
+    /**
+     * 真正执行删除
+     */
+    async _doDelete(id) {
+        try {
+            await api.deleteTodo(id);
+            // 如果当前页空了且不是第一页，回退一页
+            if (this.todos.length === 1 && this.page > 1) {
+                this.page--;
+            }
+            await this.loadTodos();
+            this.showToast("删除成功", "success");
+        } catch (err) {
+            this.showToast("删除失败", "error");
+            await this.loadTodos();
+        }
     },
 
     /**
@@ -213,14 +277,15 @@ const TodoApp = {
         const listEl = document.getElementById("todo-list");
         const emptyEl = document.getElementById("empty-state");
 
-        // 统计
-        document.getElementById("stat-total").textContent = this.todos.length;
+        // 统计（显示总数）
+        document.getElementById("stat-total").textContent = this.total;
         document.getElementById("stat-done").textContent = this.todos.filter((t) => t.done).length;
 
         // 空状态
         if (this.todos.length === 0) {
             listEl.innerHTML = "";
             emptyEl.classList.remove("hidden");
+            this._renderPagination();
             return;
         }
 
@@ -261,6 +326,31 @@ const TodoApp = {
             </li>`
             )
             .join("");
+
+        this._renderPagination();
+    },
+
+    /**
+     * 渲染分页控件
+     */
+    _renderPagination() {
+        const pagination = document.getElementById("pagination");
+        const btnPrev = document.getElementById("btn-prev");
+        const btnNext = document.getElementById("btn-next");
+        const pageInfo = document.getElementById("page-info");
+
+        const maxPage = Math.max(1, Math.ceil(this.total / this.pageSize));
+
+        // 只有一页时隐藏分页
+        if (maxPage <= 1 && !this.keyword) {
+            pagination.classList.add("hidden");
+            return;
+        }
+
+        pagination.classList.remove("hidden");
+        btnPrev.disabled = this.page <= 1;
+        btnNext.disabled = this.page >= maxPage;
+        pageInfo.textContent = `${this.page} / ${maxPage}`;
     },
 
     /**
