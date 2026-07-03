@@ -3,17 +3,21 @@
  */
 const TodoApp = {
     todos: [],
+    _eventsBound: false,
 
     /**
      * 初始化应用
      */
     init() {
-        this.bindEvents();
+        if (!this._eventsBound) {
+            this.bindEvents();
+            this._eventsBound = true;
+        }
         this.loadTodos();
     },
 
     /**
-     * 绑定 Todo 相关事件
+     * 绑定 Todo 相关事件（仅执行一次）
      */
     bindEvents() {
         // 添加待办

@@ -133,6 +133,17 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+    # 为新用户创建一个默认的待办事项
+    default_todo = models.Todo(
+        title="开始你的计划",
+        done=False,
+        owner_id=new_user.id,
+    )
+    db.add(default_todo)
+    db.commit()
+    db.refresh(default_todo)
+    new_user.todos.append(default_todo)
+    db.commit()
     return new_user
 
 
