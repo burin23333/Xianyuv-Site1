@@ -54,6 +54,9 @@
 
     <!-- ==================== Todo 主区域 ==================== -->
     <div id="todo-section" class="container hidden">
+        <!-- 实时时钟 -->
+        <div id="clock" class="clock">00:00:00</div>
+
         <div class="card todo-card">
             <!-- 顶部栏 -->
             <div class="todo-header">
@@ -61,7 +64,17 @@
                     <h1 class="app-title">📝 我的待办</h1>
                     <p class="user-greeting">欢迎，<span id="current-username"></span></p>
                 </div>
-                <button id="btn-logout" class="btn btn-outline">退出登录</button>
+                <div class="todo-header-actions">
+                    <button id="btn-theme" class="btn-icon theme-toggle" title="切换主题">🌙</button>
+                    <button id="btn-logout" class="btn btn-outline">退出登录</button>
+                </div>
+            </div>
+
+            <!-- 搜索 -->
+            <div class="todo-search">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-input" placeholder="搜索待办事项..." autocomplete="off">
+                <button id="btn-clear-search" class="btn-icon search-clear hidden" title="清除搜索">✕</button>
             </div>
 
             <!-- 添加待办 -->
@@ -81,6 +94,13 @@
                 <!-- 动态渲染 -->
             </ul>
 
+            <!-- 分页 -->
+            <div id="pagination" class="pagination hidden">
+                <button id="btn-prev" class="btn btn-page" disabled>← 上一页</button>
+                <span id="page-info" class="page-info"></span>
+                <button id="btn-next" class="btn btn-page">下一页 →</button>
+            </div>
+
             <!-- 空状态 -->
             <div id="empty-state" class="empty-state hidden">
                 <div class="empty-icon">🎉</div>
@@ -99,5 +119,7 @@
     <script src="/static/js/api.js"></script>
     <script src="/static/js/auth.js"></script>
     <script src="/static/js/app.js"></script>
+    <script src="/static/js/clock.js"></script>
+    <script src="/static/js/theme.js"></script>
 </body>
 </html>

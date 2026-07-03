@@ -148,6 +148,10 @@ const Auth = {
     logout() {
         localStorage.removeItem("access_token");
         localStorage.removeItem("username");
+        // 停止时钟更新
+        if (window.clockApp) {
+            window.clockApp.stop();
+        }
         this.showAuthSection();
     },
 
@@ -176,6 +180,11 @@ const Auth = {
         // 启动 Todo 应用
         if (window.TodoApp) {
             window.TodoApp.init();
+        }
+
+        // 初始化主题
+        if (window.Theme) {
+            window.Theme.init();
         }
     },
 };

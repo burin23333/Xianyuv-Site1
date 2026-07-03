@@ -59,9 +59,13 @@ const api = {
 
     // ==================== Todo CRUD ====================
 
-    /** 获取当前用户所有待办 */
-    getTodos() {
-        return this.request("/todos");
+    /** 获取当前用户待办（支持分页和搜索） */
+    getTodos({ keyword = "", skip = 0, limit = 10 } = {}) {
+        const params = new URLSearchParams();
+        if (keyword) params.append("keyword", keyword);
+        params.append("skip", skip);
+        params.append("limit", limit);
+        return this.request(`/todos?${params.toString()}`);
     },
 
     /** 创建待办 */
