@@ -29,6 +29,61 @@ body {
     min-height: 100vh;
     color: var(--text);
     line-height: 1.6;
+    transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ==================== 暗色主题 ==================== */
+[data-theme="dark"] {
+    --primary: #818cf8;
+    --primary-hover: #6366f1;
+    --primary-light: #312e81;
+    --danger: #f87171;
+    --danger-hover: #ef4444;
+    --success: #4ade80;
+    --text: #e2e8f0;
+    --text-light: #94a3b8;
+    --text-lighter: #64748b;
+    --bg: #1e293b;
+    --card: #0f172a;
+    --border: #334155;
+    --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] body {
+    background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+}
+
+[data-theme="dark"] .clock {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .btn-outline:hover {
+    background: #1e293b;
+}
+
+[data-theme="dark"] .todo-edit-input {
+    color: var(--text);
+    background: var(--bg);
+}
+
+/* ==================== 主题过渡动画 ==================== */
+.card,
+.form-group input,
+.todo-add-form input,
+.tab-switch,
+.tab-btn,
+.btn-outline,
+.btn-icon,
+.todo-checkbox,
+.todo-stats,
+.toast,
+.spinner,
+.toast-undo-btn,
+.todo-edit-input,
+.clock {
+    transition: background-color 0.35s ease, color 0.35s ease,
+                border-color 0.35s ease, box-shadow 0.35s ease;
 }
 
 /* ==================== 布局容器 ==================== */
@@ -240,6 +295,24 @@ body {
     margin-bottom: 24px;
 }
 
+.todo-header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.theme-toggle {
+    font-size: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    transition: transform 0.3s ease;
+}
+
+.theme-toggle:hover {
+    transform: rotate(30deg);
+}
+
 .user-greeting {
     color: var(--text-light);
     font-size: 14px;
@@ -266,6 +339,7 @@ body {
     font-size: 15px;
     outline: none;
     background: var(--bg);
+    color: var(--text);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -488,6 +562,30 @@ body {
     }
 }
 
+/* ==================== 撤销 Toast ==================== */
+.undo-toast {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.toast-undo-btn {
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    transition: background 0.2s ease;
+}
+
+.toast-undo-btn:hover {
+    background: var(--primary-light);
+}
+
 /* ==================== 实时时钟 ==================== */
 .clock {
     position: fixed;
@@ -530,6 +628,11 @@ body {
     .todo-header {
         flex-direction: column;
         gap: 12px;
+    }
+
+    .todo-header-actions {
+        width: 100%;
+        justify-content: flex-end;
     }
 
     .todo-list {

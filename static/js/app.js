@@ -9,6 +9,7 @@ const TodoApp = {
      * 初始化应用
      */
     init() {
+        Theme.init();
         if (!this._eventsBound) {
             this.bindEvents();
             this._eventsBound = true;
@@ -106,19 +107,73 @@ const TodoApp = {
     },
 
     /**
-     * 删除待办
+     * 删除待办（乐观删除 + 3 秒撤销）
      */
     async deleteTodo(id) {
-        try {
-            const result = await api.deleteTodo(id);
-            if (result.message) {
-                this.todos = this.todos.filter((t) => t.id !== id);
-                this.render();
-                this.showToast("删除成功", "success");
+        const todo = this.todos.find((t) => t.id === id);
+        if (!todo) return;
+
+        // 乐观删除：先从 UI 移除
+        this.todos = this.todos.filter((t) => t.id !== id);
+        this.render();
+
+        const title = todo.title;
+        let undone = false;
+        let toastEl = null;
+
+        // 撤销回调
+        const onUndo = () => {
+            undone = true;
+            this.todos.unshift(todo);
+            this.render();
+            this.showToast("已恢复", "success");
+        };
+
+        // 显示撤销 Toast
+        toastEl = this._buildUndoToast(title, onUndo);
+        document.body.appendChild(toastEl);
+
+        // 3 秒后真正删除
+        setTimeout(async () => {
+            if (undone) {
+                if (toastEl) toastEl.remove();
+                return;
             }
-        } catch (err) {
-            this.showToast("删除失败", "error");
-        }
+            try {
+                await api.deleteTodo(id);
+                if (toastEl) toastEl.remove();
+            } catch (err) {
+                // 删除失败，恢复数据
+                this.todos.unshift(todo);
+                this.render();
+                if (toastEl) toastEl.remove();
+                this.showToast("删除失败，已恢复", "error");
+            }
+        }, 3000);
+    },
+
+    /**
+     * 构建带撤销按钮的 Toast
+     */
+    _buildUndoToast(title, onUndo) {
+        // 移除旧 toast
+        const old = document.querySelector(".toast");
+        if (old) old.remove();
+
+        const toast = document.createElement("div");
+        toast.className = "toast undo-toast";
+
+        const span = document.createElement("span");
+        span.textContent = `已删除「${title}」`;
+
+        const btn = document.createElement("button");
+        btn.className = "toast-undo-btn";
+        btn.textContent = "撤销";
+        btn.addEventListener("click", onUndo);
+
+        toast.appendChild(span);
+        toast.appendChild(btn);
+        return toast;
     },
 
     /**
