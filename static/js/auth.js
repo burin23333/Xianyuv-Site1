@@ -136,6 +136,17 @@ const Auth = {
     },
 
     /**
+     * 绑定文件上传事件
+     */
+    bindAvatarUpload() {
+        const input = document.getElementById("avatar-upload");
+        input.onchange = () => {
+            this.handleAvatarUpload(input.files[0]);
+            input.value = "";
+        };
+    },
+
+    /**
      * 检查是否已登录
      */
     isLoggedIn() {
@@ -174,17 +185,124 @@ const Auth = {
         const username = localStorage.getItem("username") || "用户";
         document.getElementById("current-username").textContent = username;
 
-        // 监听退出登录事件
-        document.getElementById("btn-logout").addEventListener("click", () => this.logout());
+        // 绑定退出登录（仅一次）
+        const btnLogout = document.getElementById("btn-logout");
+        btnLogout.onclick = () => this.logout();
 
         // 启动 Todo 应用
         if (window.TodoApp) {
             window.TodoApp.init();
         }
 
+        // 启动时钟
+        if (window.clockApp) {
+            window.clockApp.start();
+        }
+
         // 初始化主题
         if (window.Theme) {
             window.Theme.init();
+        }
+
+        // 加载名人名言
+        if (window.Quote) {
+            window.Quote.init();
+        }
+
+        // 加载头像
+        this.loadAvatar();
+        this.bindAvatarUpload();
+    },
+
+    /**
+     * 加载用户头像，切换上传按钮与点击交互
+     */
+    async loadAvatar() {
+        try {
+            const result = await api.getAvatar();
+            const img = document.getElementById("avatar-img");
+            const uploadBtn = document.querySelector(".avatar-upload-btn");
+            if (result.url) {
+                img.src = result.url;
+                img.classList.remove("hidden");
+                img.style.cursor = "pointer";
+                uploadBtn.classList.add("hidden");
+                img.onclick = () => this._showAvatarMenu();
+            } else {
+                img.src = "";
+                img.classList.add("hidden");
+                img.style.cursor = "";
+                img.onclick = null;
+                uploadBtn.classList.remove("hidden");
+            }
+        } catch {
+            // 静默失败，不影响主功能
+        }
+    },
+
+    /**
+     * 显示更换头像确认弹窗
+     */
+    _showAvatarMenu() {
+        // 移除已存在的菜单
+        const old = document.querySelector(".avatar-menu");
+        if (old) old.remove();
+
+        const container = document.querySelector(".avatar-container");
+        const rect = container.getBoundingClientRect();
+
+        const menu = document.createElement("div");
+        menu.className = "avatar-menu";
+        menu.innerHTML = `
+            <div class="avatar-menu-arrow"></div>
+            <p class="avatar-menu-text">更换头像？</p>
+            <div class="avatar-menu-actions">
+                <button class="btn btn-sm btn-primary" id="btn-avatar-change">更换</button>
+                <button class="btn btn-sm btn-outline" id="btn-avatar-cancel">取消</button>
+            </div>
+        `;
+        menu.style.position = "fixed";
+        menu.style.top = (rect.bottom + 10) + "px";
+        menu.style.left = (rect.left + rect.width / 2) + "px";
+
+        document.body.appendChild(menu);
+
+        document.getElementById("btn-avatar-change").onclick = () => {
+            menu.remove();
+            document.getElementById("avatar-upload").click();
+        };
+        document.getElementById("btn-avatar-cancel").onclick = () => menu.remove();
+
+        // 点击菜单外部关闭
+        setTimeout(() => {
+            const closeHandler = (e) => {
+                if (!menu.contains(e.target) && !container.contains(e.target)) {
+                    menu.remove();
+                    document.removeEventListener("click", closeHandler);
+                }
+            };
+            document.addEventListener("click", closeHandler);
+        }, 0);
+    },
+
+    /**
+     * 处理头像上传
+     */
+    async handleAvatarUpload(file) {
+        if (!file) return;
+        try {
+            const result = await api.uploadAvatar(file);
+            if (result.url) {
+                const img = document.getElementById("avatar-img");
+                const uploadBtn = document.querySelector(".avatar-upload-btn");
+                img.src = result.url;
+                img.classList.remove("hidden");
+                img.style.cursor = "pointer";
+                img.onclick = () => this._showAvatarMenu();
+                uploadBtn.classList.add("hidden");
+            }
+        } catch (err) {
+            alert(err.message || "头像上传失败");
         }
     },
 };
