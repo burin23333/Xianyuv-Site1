@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Todo - 待办事项</title>
+    <title>Todo · 待办事项</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
@@ -60,9 +63,16 @@
         <div class="card todo-card">
             <!-- 顶部栏 -->
             <div class="todo-header">
-                <div>
-                    <h1 class="app-title">📝 我的待办</h1>
-                    <p class="user-greeting">欢迎，<span id="current-username"></span></p>
+                <div class="todo-header-left">
+                    <div class="avatar-container">
+                        <img id="avatar-img" class="avatar hidden" alt="头像">
+                        <input type="file" id="avatar-upload" accept="image/*" hidden>
+                        <label for="avatar-upload" class="avatar-upload-btn" title="上传头像">📷</label>
+                    </div>
+                    <div>
+                        <h1 class="app-title">📝 我的待办</h1>
+                        <p class="user-greeting">欢迎，<span id="current-username"></span></p>
+                    </div>
                 </div>
                 <div class="todo-header-actions">
                     <button id="btn-theme" class="btn-icon theme-toggle" title="切换主题">🌙</button>
@@ -80,6 +90,12 @@
             <!-- 添加待办 -->
             <form id="todo-form" class="todo-add-form">
                 <input type="text" id="todo-input" placeholder="添加新的待办事项..." required autocomplete="off">
+                <select id="todo-priority" class="priority-select">
+                    <option value="0">🟢 低</option>
+                    <option value="1" selected>🟡 中</option>
+                    <option value="2">🟠 高</option>
+                    <option value="3">🔴 紧急</option>
+                </select>
                 <button type="submit" class="btn btn-primary">添加</button>
             </form>
 
@@ -87,6 +103,7 @@
             <div class="todo-stats">
                 <span>共 <strong id="stat-total">0</strong> 项</span>
                 <span>已完成 <strong id="stat-done">0</strong> 项</span>
+                <button id="btn-clear-completed" class="btn btn-danger-sm hidden">清空已完成</button>
             </div>
 
             <!-- 待办列表 -->
@@ -113,6 +130,43 @@
                 <div class="spinner"></div>
                 <p>加载中...</p>
             </div>
+
+            <!-- 名人名言 -->
+            <div id="quote-area" class="quote-area">
+                <p id="quote-text" class="quote-text"></p>
+                <p id="quote-author" class="quote-author"></p>
+                <button id="btn-refresh-quote" class="btn-icon quote-refresh" title="换一条">🔄</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详情弹窗 -->
+    <div id="detail-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button id="btn-close-detail" class="modal-close" title="关闭">✕</button>
+            <h2 id="detail-title" class="modal-title"></h2>
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <label>优先级</label>
+                    <span id="detail-priority"></span>
+                </div>
+                <div class="detail-item">
+                    <label>创建时间</label>
+                    <span id="detail-created-at"></span>
+                </div>
+                <div class="detail-item">
+                    <label>期望完成</label>
+                    <input type="datetime-local" id="detail-due-date">
+                </div>
+                <div class="detail-item detail-item-full">
+                    <label>备注</label>
+                    <textarea id="detail-notes" rows="3" placeholder="添加备注..."></textarea>
+                </div>
+            </div>
+            <div class="detail-actions">
+                <button id="btn-save-detail" class="btn btn-primary">保存</button>
+                <button id="btn-cancel-detail" class="btn btn-outline">取消</button>
+            </div>
         </div>
     </div>
 
@@ -121,5 +175,6 @@
     <script src="/static/js/app.js"></script>
     <script src="/static/js/clock.js"></script>
     <script src="/static/js/theme.js"></script>
+    <script src="/static/js/quote.js"></script>
 </body>
 </html>

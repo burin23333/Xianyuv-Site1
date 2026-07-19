@@ -1,7 +1,8 @@
 /**
  * API 层 —— 封装所有后端请求
  */
-const API_BASE = "";  // 前后端同域，无需额外前缀
+// API_BASE 优先从 script 标签 data-api-base 属性读取，默认 /api/v1
+const API_BASE = document.currentScript?.getAttribute("data-api-base") || "/api/v1";
 
 const api = {
     /**
@@ -9,8 +10,9 @@ const api = {
      */
     async request(url, options = {}) {
         const token = localStorage.getItem("access_token");
+        const isFormData = options.body instanceof FormData;
         const headers = {
-            "Content-Type": "application/json",
+            ...(isFormData ? {} : { "Content-Type": "application/json" }),
             ...(options.headers || {}),
         };
 
@@ -23,6 +25,13 @@ const api = {
             headers,
         });
 
+        const data = await response.json();
+
+        // 将 FastAPI HTTPException 的 detail 统一转为 message
+        if (!response.ok && data.detail) {
+            data.message = data.detail;
+        }
+
         // 401 表示 token 过期或无效
         if (response.status === 401) {
             localStorage.removeItem("access_token");
@@ -31,7 +40,7 @@ const api = {
             throw new Error("登录已过期，请重新登录");
         }
 
-        return response.json();
+        return data;
     },
 
     // ==================== 认证 ====================
@@ -69,10 +78,10 @@ const api = {
     },
 
     /** 创建待办 */
-    createTodo(title) {
+    createTodo(title, priority) {
         return this.request("/todos", {
             method: "POST",
-            body: JSON.stringify({ title }),
+            body: JSON.stringify({ title, priority }),
         });
     },
 
@@ -89,5 +98,29 @@ const api = {
         return this.request(`/todos/${id}`, {
             method: "DELETE",
         });
+    },
+
+    /** 删除所有已完成的待办 */
+    deleteCompletedTodos() {
+        return this.request("/todos/completed", {
+            method: "DELETE",
+        });
+    },
+
+    // ==================== 头像 ====================
+
+    /** 上传头像 */
+    uploadAvatar(file) {
+        const formData = new FormData();
+        formData.append("avatar", file);
+        return this.request("/users/avatar", {
+            method: "POST",
+            body: formData,
+        });
+    },
+
+    /** 获取头像 URL */
+    getAvatar() {
+        return this.request("/users/avatar");
     },
 };

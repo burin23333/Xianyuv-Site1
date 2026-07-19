@@ -17,6 +17,9 @@ venv/
 .vscode/
 .idea/
 
+# 用户上传文件
+static/avatars/
+
 # 系统文件
 Thumbs.db
 .DS_Store

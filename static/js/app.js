@@ -14,7 +14,6 @@ const TodoApp = {
      * 初始化应用
      */
     init() {
-        Theme.init();
         if (!this._eventsBound) {
             this.bindEvents();
             this._eventsBound = true;
@@ -65,6 +64,45 @@ const TodoApp = {
             Auth.showAuthSection();
             this.showToast("登录已过期，请重新登录", "error");
         });
+
+        // 清空已完成
+        document.getElementById("btn-clear-completed").addEventListener("click", () => {
+            this.clearCompleted();
+        });
+
+        // 详情弹窗
+        document.getElementById("btn-close-detail").addEventListener("click", () => this.closeDetail());
+        document.getElementById("btn-cancel-detail").addEventListener("click", () => this.closeDetail());
+        document.getElementById("btn-save-detail").addEventListener("click", () => this.saveDetail());
+
+        // 事件委托：待办列表按钮点击（代替内联 onclick）
+        document.getElementById("todo-list").addEventListener("click", (e) => {
+            const actionBtn = e.target.closest("[data-action]");
+            if (!actionBtn) return;
+            const item = actionBtn.closest(".todo-item");
+            if (!item) return;
+            const id = parseInt(item.dataset.id);
+            switch (actionBtn.dataset.action) {
+                case "toggle": this.toggleDone(id); break;
+                case "detail": this.showDetail(id); break;
+                case "edit": this.startEdit(id); break;
+                case "delete": this.deleteTodo(id); break;
+            }
+        });
+
+        // 事件委托：编辑输入框键盘事件
+        document.getElementById("todo-list").addEventListener("keydown", (e) => {
+            if (e.target.classList.contains("todo-edit-input")) {
+                this.handleEditKey(e);
+            }
+        });
+
+        // 事件委托：编辑输入框失焦事件（useCapture 捕获 blur）
+        document.getElementById("todo-list").addEventListener("blur", (e) => {
+            if (e.target.classList.contains("todo-edit-input")) {
+                this.finishEdit(e);
+            }
+        }, true);
     },
 
     // ==================== 数据操作 ====================
@@ -81,8 +119,6 @@ const TodoApp = {
                 skip,
                 limit: this.pageSize,
             });
-            console.log("loadTodos 响应:", data);
-
             // 格式1：后端做了分页 → {todos:[], total:N}
             if (data && !Array.isArray(data) && data.todos) {
                 this.todos = data.todos;
@@ -132,14 +168,16 @@ const TodoApp = {
         const title = input.value.trim();
         if (!title) return;
 
+        const priority = document.getElementById("todo-priority").value;
+
         try {
-            const result = await api.createTodo(title);
-            console.log("addTodo 响应:", result);
+            const result = await api.createTodo(title, priority);
+            // 成功添加后刷新列表
             if (result.id) {
                 input.value = "";
+                document.getElementById("todo-priority").value = "1";
                 // 回到第一页显示新添加的项
                 this.page = 1;
-                console.log("重新加载列表, page=1, keyword=", this.keyword);
                 await this.loadTodos();
                 this.showToast("添加成功", "success");
             } else {
@@ -206,12 +244,16 @@ const TodoApp = {
         const btnCancel = document.createElement("button");
         btnCancel.className = "toast-cancel-btn";
         btnCancel.textContent = "取消";
-        btnCancel.addEventListener("click", () => toast.remove());
+        btnCancel.addEventListener("click", (e) => {
+            e.preventDefault();
+            toast.remove();
+        });
 
         const btnOk = document.createElement("button");
         btnOk.className = "toast-ok-btn";
         btnOk.textContent = "确认";
-        btnOk.addEventListener("click", () => {
+        btnOk.addEventListener("click", (e) => {
+            e.preventDefault();
             toast.remove();
             onConfirm();
         });
@@ -279,7 +321,9 @@ const TodoApp = {
 
         // 统计（显示总数）
         document.getElementById("stat-total").textContent = this.total;
-        document.getElementById("stat-done").textContent = this.todos.filter((t) => t.done).length;
+        const doneCount = this.todos.filter((t) => t.done).length;
+        document.getElementById("stat-done").textContent = doneCount;
+        document.getElementById("btn-clear-completed").classList.toggle("hidden", doneCount === 0);
 
         // 空状态
         if (this.todos.length === 0) {
@@ -291,37 +335,23 @@ const TodoApp = {
 
         emptyEl.classList.add("hidden");
 
-        // 排序：未完成在前，按 id 倒序
-        const sorted = [...this.todos].sort((a, b) => {
-            if (a.done !== b.done) return a.done ? 1 : -1;
-            return b.id - a.id;
-        });
-
-        listEl.innerHTML = sorted
+        listEl.innerHTML = this.todos
             .map(
                 (todo) => `
             <li class="todo-item ${todo.done ? "done" : ""}" data-id="${todo.id}">
                 <div class="todo-checkbox ${todo.done ? "checked" : ""}"
-                     onclick="TodoApp.toggleDone(${todo.id})"
+                     data-action="toggle"
                      title="${todo.done ? "标记为未完成" : "标记为已完成"}">
                     ${todo.done ? "✓" : ""}
                 </div>
                 <span class="todo-title">${this.escapeHtml(todo.title)}</span>
+                <span class="priority-tag priority-${(todo.priority || 1)}">${this._priorityLabel(todo.priority)}</span>
                 <input class="todo-edit-input" value="${this.escapeHtml(todo.title)}"
-                       data-id="${todo.id}"
-                       onblur="TodoApp.finishEdit(event)"
-                       onkeydown="TodoApp.handleEditKey(event)">
+                       data-id="${todo.id}">
                 <div class="todo-actions">
-                    <button class="btn-icon edit"
-                            onclick="TodoApp.startEdit(${todo.id})"
-                            title="编辑">
-                        ✎
-                    </button>
-                    <button class="btn-icon delete"
-                            onclick="TodoApp.deleteTodo(${todo.id})"
-                            title="删除">
-                        ✕
-                    </button>
+                    <button class="btn-icon info" data-action="detail" title="详情">ℹ</button>
+                    <button class="btn-icon edit" data-action="edit" title="编辑">✎</button>
+                    <button class="btn-icon delete" data-action="delete" title="删除">✕</button>
                 </div>
             </li>`
             )
@@ -398,6 +428,14 @@ const TodoApp = {
     // ==================== 工具方法 ====================
 
     /**
+     * 优先级数字 → 文字标签
+     */
+    _priorityLabel(value) {
+        const labels = { 0: "低", 1: "中", 2: "高", 3: "紧急" };
+        return labels[value] || "中";
+    },
+
+    /**
      * HTML 转义，防止 XSS
      */
     escapeHtml(text) {
@@ -411,6 +449,93 @@ const TodoApp = {
      */
     showLoading(show) {
         document.getElementById("loading-state").classList.toggle("hidden", !show);
+    },
+
+    /**
+     * 清空所有已完成的待办
+     */
+    async clearCompleted() {
+        const doneCount = this.todos.filter((t) => t.done).length;
+        if (doneCount === 0) return;
+
+        try {
+            const data = await api.deleteCompletedTodos();
+            await this.loadTodos();
+            this.showToast(data.message || "已清空", "success");
+        } catch (err) {
+            this.showToast("操作失败", "error");
+        }
+    },
+
+    // ==================== 详情弹窗 ====================
+
+    _detailId: null,
+
+    /**
+     * 打开详情弹窗
+     */
+    showDetail(id) {
+        const todo = this.todos.find((t) => t.id === id);
+        if (!todo) {
+            return;
+        }
+
+        this._detailId = id;
+        document.getElementById("detail-title").textContent = todo.title;
+        document.getElementById("detail-priority").textContent = this._priorityLabel(todo.priority);
+        document.getElementById("detail-created-at").textContent = todo.created_at
+            ? new Date(todo.created_at).toLocaleString()
+            : "未知";
+        document.getElementById("detail-notes").value = todo.notes || "";
+
+        // 设置截止时间
+        const dueInput = document.getElementById("detail-due-date");
+        if (todo.due_date) {
+            const d = new Date(todo.due_date);
+            const pad = (n) => String(n).padStart(2, "0");
+            dueInput.value = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        } else {
+            dueInput.value = "";
+        }
+
+        document.getElementById("detail-modal").classList.remove("hidden");
+    },
+
+    /**
+     * 关闭详情弹窗
+     */
+    closeDetail() {
+        document.getElementById("detail-modal").classList.add("hidden");
+        this._detailId = null;
+    },
+
+    /**
+     * 保存详情（截止时间 / 备注）
+     */
+    async saveDetail() {
+        const id = this._detailId;
+        if (!id) return;
+
+        const dueDateValue = document.getElementById("detail-due-date").value;
+        const notes = document.getElementById("detail-notes").value.trim();
+
+        const data = {};
+        data.due_date = dueDateValue ? new Date(dueDateValue).toISOString() : null;
+        data.notes = notes || null;
+
+        try {
+            const result = await api.updateTodo(id, data);
+            // 更新本地缓存
+            const todo = this.todos.find((t) => t.id === id);
+            if (todo) {
+                todo.due_date = data.due_date;
+                todo.notes = data.notes;
+            }
+            this.closeDetail();
+            this.showToast("保存成功", "success");
+        } catch (err) {
+            this.showToast("保存失败", "error");
+        }
     },
 
     /**
